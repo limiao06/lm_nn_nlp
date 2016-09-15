@@ -1,5 +1,9 @@
 #! /usr/bin/env python
 
+import sys
+import copy
+import json
+
 import tensorflow as tf
 import numpy as np
 import os
@@ -16,17 +20,17 @@ from text_cnn import TextCNN
 
 # Model Hyperparameters
 tf.flags.DEFINE_integer("embedding_dim", 128, "Dimensionality of character embedding (default: 128)")
-tf.flags.DEFINE_string("filter_sizes", "2,3,4,5", "Comma-separated filter sizes (default: '3,4,5')")
+tf.flags.DEFINE_string("filter_sizes", "2,3,4,5", "Comma-separated filter sizes (default: '2,3,4,5')")
 tf.flags.DEFINE_integer("num_filters", 128, "Number of filters per filter size (default: 128)")
 tf.flags.DEFINE_float("dropout_keep_prob", 0.5, "Dropout keep probability (default: 0.5)")
 tf.flags.DEFINE_float("l2_reg_lambda", 0.0, "L2 regularizaion lambda (default: 0.0)")
 tf.flags.DEFINE_integer("vocab_min_freq", 5, "")
 
 # Training parameters
-tf.flags.DEFINE_integer("batch_size", 512, "Batch Size (default: 64)")
-tf.flags.DEFINE_integer("num_epochs", 6, "Number of training epochs (default: 200)")
+tf.flags.DEFINE_integer("batch_size", 512, "Batch Size (default: 512)")
+tf.flags.DEFINE_integer("num_epochs", 6, "Number of training epochs (default: 6)")
 tf.flags.DEFINE_integer("evaluate_every", 100, "Evaluate model on dev set after this many steps (default: 100)")
-tf.flags.DEFINE_integer("checkpoint_every", 1000, "Save model after this many steps (default: 100)")
+tf.flags.DEFINE_integer("checkpoint_every", 1000, "Save model after this many steps (default: 1000)")
 tf.flags.DEFINE_integer("max_dev_size", 50000, "Max number of dev set")
 tf.flags.DEFINE_boolean("variables_average", False, "Allow device soft device placement")
 
@@ -39,7 +43,6 @@ tf.flags.DEFINE_string("train_data", "", "The training data")
 tf.flags.DEFINE_string("model_dir", "", "The output model_dir")
 
 
-
 FLAGS = tf.flags.FLAGS
 FLAGS._parse_flags()
 print("\nParameters:")
@@ -47,8 +50,14 @@ for attr, value in sorted(FLAGS.__flags.items()):
     print("{}={}".format(attr.upper(), value))
 print("")
 
+
+if not FLAGS.train_data or not FLAGS.model_dir:
+	print("Error: train data or model dir not given!")
+	exit(-1)
+
 if not os.path.exists(FLAGS.model_dir):
     os.mkdir(FLAGS.model_dir)
+
 
 
 
@@ -59,11 +68,7 @@ if not os.path.exists(FLAGS.model_dir):
 # Load data
 def loadData(train_data):
     print("Loading data...")
-    #change (1)
-    if FLAGS.use_ner:
-        x_text, y, num = data.new_load_data_and_labels(train_data)
-    else:
-        x_text, y, num = data.load_data_and_labels(train_data)
+    x_text, y, num = data_helpers.load_data_and_labels(train_data)
     print("Complete loading!")
     max_index, max_document_length = max([(i, len(xx.split(" "))) for i,xx in enumerate(x_text)], key=lambda x:x[1])
     print('Max document length: %d' %(max_document_length))
@@ -94,9 +99,11 @@ def loadData(train_data):
 x_train, y_train, x_dev, y_dev, vocab_processor, num = loadData(FLAGS.train_data)
 
 # Save configurations 
-config_file = os.path.join(out_dir, 'config.json')
+config_file = os.path.join(FLAGS.model_dir, 'config.json')
 config_writer = file(config_file, 'w')
-config_json = copy(FLAGS.__flags)
+config_json = {}
+for attr, value in sorted(FLAGS.__flags.items()):
+    config_json[attr] = value
 config_json['vocab_size'] = len(vocab_processor.vocabulary_)
 json.dump(config_json, config_writer, indent=4)
 config_writer.close()
