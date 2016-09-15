@@ -7,8 +7,10 @@ import datetime
 import sys
 import json
 from tensorflow.contrib import learn
-sys.path.append('/mnt/workspace/limiao/cnn/multi_gpu/')
-import text_cnn
+
+
+sys.path.append(os.path.join(os.path.dirname(__file__),'../'))
+from text_cnn import TextCNN
 
 # only use for 2-class intention classification problem
 
@@ -57,12 +59,12 @@ class CNNPredict(object):
         # Map data into vocabulary
         x_test = np.array(list(self.vocab_processor.transform(x_raw)))
         with self.graph.as_default(), tf.device('/gpu:%d' % gpu):
-            probs = self.sess.run(probs, {self.input_x: x_test, self.dropout_keep_prob:1.0})
+            probs = self.sess.run(self.probs, {self.input_x: x_test, self.dropout_keep_prob:1.0})
             return probs[0][1]
 
 
 if __name__ == '__main__':
     cnn_predictor = CNNPredict(FLAGS.model_dir, FLAGS.model_point)
-    print cnn_predictor.predict(u'刘德华')
-    print cnn_predictor.predict(u'夜间 天气 怎么 样')
-    print cnn_predictor.predict(u'真 的 没 心情 啊')
+    print cnn_predictor.predict_prob(u'刘德华')
+    print cnn_predictor.predict_prob(u'夜间 天气 怎么 样')
+    print cnn_predictor.predict_prob(u'真 的 没 心情 啊')
