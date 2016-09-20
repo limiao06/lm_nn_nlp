@@ -59,7 +59,7 @@ if not os.path.exists(FLAGS.model_dir):
     os.mkdir(FLAGS.model_dir)
 
 
-
+gpu=0
 
 
 # Data Preparatopn
@@ -108,6 +108,9 @@ config_json['vocab_size'] = len(vocab_processor.vocabulary_)
 json.dump(config_json, config_writer, indent=4)
 config_writer.close()
 
+log_file = os.path.join(FLAGS.model_dir, 'dev_performance.log')
+logger = file(log_file, 'w')
+
 
 # Training
 # ==================================================
@@ -118,7 +121,7 @@ with tf.Graph().as_default():
       log_device_placement=FLAGS.log_device_placement)
     sess = tf.Session(config=session_conf)
     with sess.as_default():
-        with tf.device('/gpu:0'):
+        with tf.device('/gpu:%d' %(gpu)):
             cnn = TextCNN(
                 sequence_length=x_train.shape[1],
                 num_classes=num,
@@ -213,6 +216,7 @@ with tf.Graph().as_default():
                     feed_dict)
                 time_str = datetime.datetime.now().isoformat()
                 print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
+                logger.write("{}: step {}, loss {:g}, acc {:g}\n".format(time_str, step, loss, accuracy))
                 if writer:
                     writer.add_summary(summaries, step)
 
