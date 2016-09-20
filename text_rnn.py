@@ -6,7 +6,7 @@ import time
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.models.rnn import rnn, rnn_cell
+from tensorflow.python.ops import rnn, rnn_cell
 
 
 class TextRNN():
@@ -42,11 +42,11 @@ class TextRNN():
             self.embedded_chars = tf.nn.embedding_lookup(W, self.input_x)
 
             # shape: (batch_size, seq_length, cell.input_size) => (seq_length, batch_size, cell.input_size)
-            inputs = tf.split(1, args.seq_length, self.embedded_chars)
+            inputs = tf.split(1, sequence_length, self.embedded_chars)
             self.embedded_chars_reshape =  [tf.squeeze(input_, [1]) for input_ in inputs]
 
         # rnn
-        outputs, last_state = rnn.rnn(cell, inputs, self.initial_state, scope='rnnLayer')
+        outputs, last_state = rnn.rnn(cell, self.embedded_chars_reshape, dtype=tf.float32, scope='rnnLayer')
 
         # sentence_feature
         self.feature = outputs[-1]
@@ -56,7 +56,7 @@ class TextRNN():
             self.h_drop = tf.nn.dropout(self.feature, self.dropout_keep_prob)
 
         # softmax
-        with tf.variable_scope('softmaxLayer'):
+        with tf.variable_scope('output'):
             W = tf.get_variable(
                 "W",
                 shape=[embedding_size, num_classes],
@@ -64,7 +64,7 @@ class TextRNN():
             b = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="b")
             l2_loss += tf.nn.l2_loss(W)
             l2_loss += tf.nn.l2_loss(b)
-            self.logits = tf.matmul(outputs[-1], softmax_w) + softmax_b
+            self.logits = tf.matmul(self.h_drop, W) + b
             self.probs = tf.nn.softmax(self.logits, name="probs")
             self.predictions = tf.argmax(self.logits, 1, name="predictions")
 
