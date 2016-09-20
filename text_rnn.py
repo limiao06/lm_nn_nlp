@@ -43,7 +43,7 @@ class TextRNN():
 
             # shape: (batch_size, seq_length, cell.input_size) => (seq_length, batch_size, cell.input_size)
             inputs = tf.split(1, sequence_length, self.embedded_chars)
-            self.embedded_chars_reshape =  [tf.squeeze(input_, [1]) for input_ in inputs]
+            self.embedded_chars_reshape = [tf.squeeze(input_, [1]) for input_ in inputs]
 
         # rnn
         outputs, last_state = rnn.rnn(cell, self.embedded_chars_reshape, dtype=tf.float32, scope='rnnLayer')
@@ -62,11 +62,12 @@ class TextRNN():
                 shape=[embedding_size, num_classes],
                 initializer=tf.contrib.layers.xavier_initializer())
             b = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="b")
-            l2_loss += tf.nn.l2_loss(W)
-            l2_loss += tf.nn.l2_loss(b)
             self.logits = tf.matmul(self.h_drop, W) + b
             self.probs = tf.nn.softmax(self.logits, name="probs")
             self.predictions = tf.argmax(self.logits, 1, name="predictions")
+
+        for var in tf.trainable_variables():
+            l2_loss += tf.nn.l2_loss(var)
 
         # CalculateMean cross-entropy loss
         with tf.name_scope("loss"):
