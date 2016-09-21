@@ -68,11 +68,12 @@ class TextCNN(object):
                 shape=[num_filters_total, num_classes],
                 initializer=tf.contrib.layers.xavier_initializer())
             b = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="b")
-            l2_loss += tf.nn.l2_loss(W)
-            l2_loss += tf.nn.l2_loss(b)
             self.scores = tf.nn.xw_plus_b(self.h_drop, W, b, name="scores")
             self.predictions = tf.argmax(self.scores, 1, name="predictions")
             self.probs = tf.nn.softmax(self.scores, name="probs")
+
+        for var in tf.trainable_variables():
+            l2_loss += tf.nn.l2_loss(var)
 
         # CalculateMean cross-entropy loss
         with tf.name_scope("loss"):
